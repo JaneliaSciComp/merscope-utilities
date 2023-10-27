@@ -114,9 +114,19 @@ def delete_directory(base_dir):
         try:
             shutil.rmtree(base_dir)
         except Exception as err:
-            ERRORS.append(f"Could not delete {base_dir}\n" \
+            ERRORS.append(f"Could not rmtree delete {base_dir}\n" \
                           + (TEMPLATE % (type(err).__name__, err.args)))
             return False
+        if os.path.exists(base_dir):
+            # There are some cases where the tree is deleted with the exception
+            # of the top-level dir
+            try:
+                os.rmdir(base_dir)
+            except Exception as err:
+                ERRORS.append(f"Could not rmdir delete {base_dir}\n" \
+                              + (TEMPLATE % (type(err).__name__, err.args)))
+        if os.path.exists(base_dir):
+            ERROR.append("Despite attempts to delete it, %s still exists", base_dir)
     LOGGER.warning("Deleted %s", base_dir)
     DELETED.append(base_dir)
     return True
@@ -177,7 +187,7 @@ def handle_single_experiment(exp):
         if not ARG.TRANSFER:
             continue
         try:
-            shutil.copytree(src, tgt)
+            shutil.copytree(src, tgt, dirs_exist_ok=True)
         except Exception as err:
             ok_to_delete = False
             ERRORS.append(f"Could not copy {src}/{exp}\n"
