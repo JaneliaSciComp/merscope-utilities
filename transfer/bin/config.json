@@ -1,0 +1,9 @@
+{
+ "mail_server": "mail.hhmi.org",
+ "sender": "svirskasr@hhmi.org",
+ "receivers": ["svirskasr@hhmi.org"],
+ "source": "Z:",
+ "secondary": "D:/MERSCOPEDATA",
+ "target": "Y:/MERSCOPE DATA/test",
+ "minimum_age": 300
+}
