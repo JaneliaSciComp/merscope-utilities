@@ -197,14 +197,14 @@ def email_results():
     LOGGER.info("Sending mail for transferred/deleted experiments")
     mtext = ""
     if TRANSFERRED:
-        if not ARG.TRANSFER:
-            mtext += "--- TRANSFER mode was not enabled - no files were transferred ---"
         mtext += "The following experiments have been transferred:\n"
+        if not ARG.TRANSFER:
+            mtext += "--- TRANSFER mode was not enabled - no files were transferred ---\n"
         mtext += "\n".join(TRANSFERRED) + "\n\n"
     if DELETED:
-        if not ARG.DELETE:
-            mtext += "--- DELETE mode was not enabled - no files were deleted ---"
         mtext += "The following directories have been deleted:\n"
+        if not ARG.DELETE:
+            mtext += "--- DELETE mode was not enabled - no files were deleted ---\n"
         mtext += "\n".join(DELETED) + "\n\n"
     if ERRORS:
         mtext += "The following errors have occurred:\n"
