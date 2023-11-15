@@ -126,8 +126,8 @@ def delete_directory(base_dir):
                 ERRORS.append(f"Could not rmdir delete {base_dir}\n" \
                               + (TEMPLATE % (type(err).__name__, err.args)))
         if os.path.exists(base_dir):
-            ERROR.append("Despite attempts to delete it, %s still exists", base_dir)
-    LOGGER.warning("Deleted %s", base_dir)
+            ERRORS.append("Despite attempts to delete it, %s still exists", base_dir)
+    LOGGER.info("Deleted %s", base_dir)
     DELETED.append(base_dir)
     return True
 
@@ -139,8 +139,27 @@ def delete_experiment(exp):
         Returns:
           None
     """
+    # Check to see if directories have been transferred
+    transfer_error = False
+    for sfx in SUFFIX:
+        tgt = f"{CONFIG['target']}/merfish_{sfx}/{exp}"
+        if not os.path.exists(tgt):
+            ERRORS.append(f"Experiment {exp} merfish_{sfx} did not transfer")
+            transfer_error = True
+    if transfer_error:
+        msg = f"Deletion for {exp} is cancelled"
+        LOGGER.error(msg)
+        ERRORS.append(msg)
+        return
+    # Check for sentinel file
+    sentinel = f"{CONFIG['source']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
+    if not os.path.isfile(sentinel):
+        msg = f"MERLIN_TRANSFERRED sentinel file missing for {exp}"
+        LOGGER.error(msg)
+        ERRORS.append(msg)
+        return
+    # Delete files
     delete_done = True
-    TRANSFERRED.append(exp)
     for sfx in SUFFIX:
         src = f"{CONFIG['source']}/merfish_{sfx}/{exp}"
         if not delete_directory(src):
@@ -178,7 +197,7 @@ def handle_single_experiment(exp):
     LOGGER.info(exp)
     if not experiment_complete(exp):
         return
-    ok_to_delete = True
+    transfer_complete = True
     src_base = f"{CONFIG['source']}"
     for sfx in SUFFIX:
         src = f"{src_base}/merfish_{sfx}/{exp}"
@@ -187,13 +206,19 @@ def handle_single_experiment(exp):
         if not ARG.TRANSFER:
             continue
         try:
-            shutil.copytree(src, tgt, dirs_exist_ok=True)
+            shutil.copytree(src, tgt, dirs_exist_ok=True, symlinks=True)
         except Exception as err:
-            ok_to_delete = False
+            transfer_complete = False
             ERRORS.append(f"Could not copy {src}/{exp}\n"
                           + (TEMPLATE % (type(err).__name__, err.args)))
             break
-    if ok_to_delete:
+    if transfer_complete:
+        # Write sentinel file
+        sentinel = f"{CONFIG['source']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
+        with open(sentinel, 'w', encoding='ascii') as outfile:
+            outfile.write("Transfer complete")
+        TRANSFERRED.append(exp)
+        # Delete the experiment
         delete_experiment(exp)
 
 
