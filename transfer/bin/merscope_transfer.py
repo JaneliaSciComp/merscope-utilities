@@ -152,7 +152,7 @@ def delete_experiment(exp):
         ERRORS.append(msg)
         return
     # Check for sentinel file
-    sentinel = f"{CONFIG['source']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
+    sentinel = f"{CONFIG['target']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
     if not os.path.isfile(sentinel):
         msg = f"MERLIN_TRANSFERRED sentinel file missing for {exp}"
         LOGGER.error(msg)
@@ -213,10 +213,12 @@ def handle_single_experiment(exp):
                           + (TEMPLATE % (type(err).__name__, err.args)))
             break
     if transfer_complete:
-        # Write sentinel file
-        sentinel = f"{CONFIG['source']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
-        with open(sentinel, 'w', encoding='ascii') as outfile:
-            outfile.write("Transfer complete")
+        if ARG.TRANSFER:
+            # Write sentinel file
+            sentinel = f"{CONFIG['target']}/merfish_output/{exp}/MERLIN_TRANSFERRED"
+            LOGGER.info("Writing sentinel file %s", sentinel)
+            with open(sentinel, 'w', encoding='ascii') as outfile:
+                outfile.write("Transfer complete")
         TRANSFERRED.append(exp)
         # Delete the experiment
         delete_experiment(exp)
@@ -266,7 +268,11 @@ def process_experiments():
         terminate_program(f"Could not find source directory {sdir}")
     except Exception as err:
         terminate_program(TEMPLATE % (type(err).__name__, err.args))
+    if ARG.FILE and ARG.FILE not in dirs:
+        terminate_program(f"Experiment {ARG.FILE} is not in {sdir}")
     for edir in dirs:
+        if ARG.FILE and edir != ARG.FILE:
+            continue
         handle_single_experiment(edir)
     if TRANSFERRED or DELETED or ERRORS:
         email_results()
@@ -275,6 +281,8 @@ def process_experiments():
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(
         description="Transfer MERSCOPE experiment files")
+    PARSER.add_argument('--file', dest='FILE', action='store',
+                        help='Single experiment to transfer')
     PARSER.add_argument('--transfer', dest='TRANSFER', action='store_true',
                         default=False, help='Transfer experiments')
     PARSER.add_argument('--delete', dest='DELETE', action='store_true',
